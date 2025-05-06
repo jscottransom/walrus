@@ -1,4 +1,4 @@
-# Write Ahead Log (WAL) Implementation 📚
+# WALRus 📚
 
 ## Overview 🚀
 This project implements a Write Ahead Log (WAL) which ensures durability and consistency by recording changes to the log before they are applied to the actual data store.
