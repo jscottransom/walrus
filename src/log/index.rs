@@ -1,4 +1,4 @@
-use std::io::Result;
+use std::io::{ErrorKind, Result};
 use std::fs::File;
 use memmap2::MmapMut;
 
@@ -62,5 +62,25 @@ impl Index {
 
         Ok((out, new_position))
 
+    }
+
+    fn write(&mut self, off: u32, pos: u64) -> Result<()> {
+        // Check if there's enough space in the memory map
+        if (self.mmap.len() as u64) < self.size + ENT_WIDTH {
+            return Err(std::io::Error::new(ErrorKind::UnexpectedEof, "Not enough space in memory"));
+        }
+
+        // Writing the offset (u32) into mmap
+        let off_bytes = off.to_be_bytes();
+        self.mmap[self.size as usize..(self.size + OFF_WIDTH) as usize].copy_from_slice(&off_bytes);
+
+        
+        let pos_bytes = pos.to_be_bytes();  // Convert pos (u64) to bytes in big-endian order
+        self.mmap[(self.size + OFF_WIDTH) as usize..(self.size + ENT_WIDTH) as usize].copy_from_slice(&pos_bytes);
+
+        // Update the size
+        self.size += ENT_WIDTH;
+
+        Ok(())
     }
 }
