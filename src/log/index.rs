@@ -17,7 +17,7 @@ impl Index {
     fn new_index(file: &File, config: Config) -> Result<Self> {
         let size = file.metadata()?.len() as u64;
         let file_obj = file.try_clone()?;
-        file_obj.set_len(&c.Segment.Max_Index_Bytes)?;
+        file_obj.set_len(&c.Segment.Max_Index_Bytes as i64)?;
         let mut mmap = unsafe { MmapMut::map_mut(&file_obj)? };
         
         let index = Index{
@@ -26,5 +26,13 @@ impl Index {
             size: size
         };
         Ok(index)
+    }
+
+    fn close(&mut self) -> Result<()> {
+        self.file.sync_all()?;
+        self.file.set_len((self.size as i64).try_into().unwrap())?;
+
+        Ok(())
+
     }
 }
