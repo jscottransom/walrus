@@ -1,11 +1,8 @@
 use std::sync::{Arc, Mutex};
 use std::fs::File;
-use std::{io, thread};
 use std::io::{BufWriter, Write, Result, Read, Seek, SeekFrom};
-use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
+use byteorder::{BigEndian, ByteOrder};
 use tempfile::tempdir;
-
-use anyhow::Context;
 
 
 const LEN_WIDTH: usize = 8;
@@ -19,20 +16,24 @@ struct Store {
     size: u64,
 }
 
+type SafeStore = Arc<Mutex<Store>>;
 impl Store {
-    pub fn new_store(file: &File) -> Result<Store> {
-        let metadata = file.metadata().expect("Failed to get metadata");
-        let size = metadata.len() as u64;
+    pub fn new_store(file: &File) -> Result<SafeStore> {
+        let size = file.metadata()?.len() as u64;
+        let file_obj = file.try_clone()?;
         let writer = BufWriter::new(file.try_clone().expect("clone failed"));
-        Ok(Store {
+        Ok(Arc::new(Mutex::new(Store{
             file: file.try_clone()?,
             size: size, 
             buf: writer
-        })
+        })))
     }
 
     // Append a slice of bytes to the store log
     pub fn append(&mut self, p: &[u8]) -> Result<(u64, u64)> {
+        
+        // Lock the Log
+      
         let pos = self.size;
 
         // Write the length of the data
