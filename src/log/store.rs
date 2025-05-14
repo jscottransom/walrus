@@ -1,15 +1,14 @@
-use std::sync::{Arc, Mutex};
-use std::fs::File;
-use std::io::{BufWriter, Write, Result, Read, Seek, SeekFrom};
 use byteorder::{BigEndian, ByteOrder};
+use std::fs::File;
+use std::io::{BufWriter, Read, Result, Seek, SeekFrom, Write};
+use std::sync::{Arc, Mutex};
 use tempfile::tempdir;
-
 
 const LEN_WIDTH: usize = 8;
 
 // The base object we will work with
 // This will be wrapped in a mutex for safety during usage
-// Simple wrapper around 
+// Simple wrapper around
 struct Store {
     file: File,
     buf: BufWriter<File>,
@@ -22,18 +21,17 @@ impl Store {
         let size = file.metadata()?.len() as u64;
         let file_obj = file.try_clone()?;
         let writer = BufWriter::new(file.try_clone().expect("clone failed"));
-        Ok(Arc::new(Mutex::new(Store{
-            file: file.try_clone()?,
-            size: size, 
-            buf: writer
+        Ok(Arc::new(Mutex::new(Store {
+            file: file_obj,
+            size: size,
+            buf: writer,
         })))
     }
 
     // Append a slice of bytes to the store log
     pub fn append(&mut self, p: &[u8]) -> Result<(u64, u64)> {
-        
         // Lock the Log
-      
+
         let pos = self.size;
 
         // Write the length of the data
@@ -56,32 +54,30 @@ impl Store {
         // Flush any contents in the buffer
         self.buf.flush()?;
         let mut size = vec![0u8; LEN_WIDTH];
-        
+
         // Start reading from the given position
-        self.file.seek(SeekFrom::Start(pos))?;  
-        self.file.read_exact(&mut size)?; 
+        self.file.seek(SeekFrom::Start(pos))?;
+        self.file.read_exact(&mut size)?;
 
         // Encode size
         let new_pos = u64::from_be_bytes(size.try_into().unwrap());
-        let mut b = vec![0u8; new_pos as usize]; 
-        
+        let mut b = vec![0u8; new_pos as usize];
+
         // Read the actual bytes
         self.file.seek(SeekFrom::Start(pos + LEN_WIDTH as u64))?;
         self.file.read_exact(&mut b)?;
         Ok(b)
     }
 
-    // Reads len(p) bytes into p, beginning at the offset in the 
-    // store file.  
+    // Reads len(p) bytes into p, beginning at the offset in the
+    // store file.
     pub fn read_at(&mut self, p: &mut [u8], off: u64) -> Result<usize> {
         self.buf.flush()?;
         self.file.seek(SeekFrom::Start(off))?;
-        self.file.read_exact( p)?;
+        self.file.read_exact(p)?;
 
         Ok(p.len())
-
     }
-
 }
 
 #[cfg(test)]
@@ -93,7 +89,6 @@ mod tests {
         let dir = tempdir()?;
         let file_path = dir.path().join("test-new-store.txt");
         let file = File::create(file_path)?;
-        
 
         let store = Store::new_store(&file);
 
