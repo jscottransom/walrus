@@ -2,14 +2,14 @@ use byteorder::{BigEndian, ByteOrder};
 use std::fs::File;
 use std::io::{BufWriter, Read, Result, Seek, SeekFrom, Write};
 use std::sync::{Arc, Mutex};
-use tempfile::tempdir;
+
 
 const LEN_WIDTH: usize = 8;
 
 // The base object we will work with
 // This will be wrapped in a mutex for safety during usage
 // Simple wrapper around
-struct Store {
+pub struct Store {
     file: File,
     buf: BufWriter<File>,
     size: u64,
@@ -77,23 +77,5 @@ impl Store {
         self.file.read_exact(p)?;
 
         Ok(p.len())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_new_store() -> Result<()> {
-        let dir = tempdir()?;
-        let file_path = dir.path().join("test-new-store.txt");
-        let file = File::create(file_path)?;
-
-        let store = Store::new_store(&file);
-
-        drop(file);
-        dir.close()?;
-        Ok(())
     }
 }

@@ -1,6 +1,9 @@
 use memmap2::MmapMut;
 use std::fs::File;
 use std::io::{Error, ErrorKind, Result};
+use crate::log::config;
+
+use super::config::Config;
 
 const OFF_WIDTH: u64 = 4;
 const POS_WIDTH: u64 = 8;
@@ -13,10 +16,10 @@ struct Index {
 }
 
 impl Index {
-    fn new_index(file: &File, config: Config) -> Result<Self> {
+    fn new_index(file: &File, conf: &config::Config) -> Result<Self> {
         let size = file.metadata()?.len() as u64;
         let file_obj = file.try_clone()?;
-        file_obj.set_len(&c.Segment.Max_Index_Bytes as i64)?;
+        file_obj.set_len((conf.segement.max_store_bytes as i64).try_into().unwrap())?;
         let mut mmap = unsafe { MmapMut::map_mut(&file_obj)? };
 
         let index = Index {
