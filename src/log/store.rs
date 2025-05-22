@@ -3,7 +3,6 @@ use std::fs::File;
 use std::io::{BufWriter, Read, Result, Seek, SeekFrom, Write};
 use std::sync::{Arc, Mutex};
 
-
 const LEN_WIDTH: usize = 8;
 
 // The base object we will work with
@@ -18,15 +17,15 @@ pub struct Store {
 pub type SafeStore = Arc<Mutex<Store>>;
 
 pub fn new(file: &File) -> Result<SafeStore> {
-        let size = file.metadata()?.len() as u64;
-        let file_obj = file.try_clone()?;
-        let writer = BufWriter::new(file.try_clone().expect("clone failed"));
-        Ok(Arc::new(Mutex::new(Store {
-            file: file_obj,
-            size: size,
-            buf: writer,
-        })))
-    }
+    let size = file.metadata()?.len() as u64;
+    let file_obj = file.try_clone()?;
+    let writer = BufWriter::new(file.try_clone().expect("clone failed"));
+    Ok(Arc::new(Mutex::new(Store {
+        file: file_obj,
+        size: size,
+        buf: writer,
+    })))
+}
 impl Store {
     // Append a slice of bytes to the store log
     pub fn append(&mut self, p: &[u8]) -> Result<(u64, u64)> {

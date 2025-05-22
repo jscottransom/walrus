@@ -8,6 +8,16 @@ anyhow = "1.0.98"
 byteorder = "1.5.0"
 memmap = "0.7.0"
 memmap2 = "0.9.5"
+prost = "0.13.5"
+prost-types = "0.13.5"
+protobuf = "3.7.2"
+protobuf-codegen = "3.7.2"
+
+[build-dependencies]
+prost = "0.13.5"
+prost-types = "0.13.5"
+protobuf-codegen = "3.7.2"
+prost-build = "0.13.5"
 
 [lib]
 path = "src/lib.rs"

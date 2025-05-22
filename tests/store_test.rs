@@ -1,9 +1,8 @@
-use tempfile::tempdir;
-use std::io::Result;
 use std::fs::File;
+use std::io::Result;
+use tempfile::tempdir;
 
 use walrus::log::store;
-
 
 fn test_new_store() -> Result<()> {
     let dir = tempdir()?;
@@ -16,4 +15,3 @@ fn test_new_store() -> Result<()> {
     dir.close()?;
     Ok(())
 }
-

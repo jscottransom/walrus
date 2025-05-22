@@ -1,8 +1,7 @@
+use crate::log::config;
 use memmap2::MmapMut;
 use std::fs::File;
 use std::io::{Error, ErrorKind, Result};
-use crate::log::config;
-
 
 const OFF_WIDTH: u64 = 4;
 const POS_WIDTH: u64 = 8;
@@ -15,21 +14,20 @@ pub struct Index {
 }
 
 pub fn new(file: &File, conf: &config::Config) -> Result<Index> {
-        let size = file.metadata()?.len() as u64;
-        let file_obj = file.try_clone()?;
-        file_obj.set_len((conf.segement.max_store_bytes as i64).try_into().unwrap())?;
-        let mut mmap = unsafe { MmapMut::map_mut(&file_obj)? };
+    let size = file.metadata()?.len() as u64;
+    let file_obj = file.try_clone()?;
+    file_obj.set_len((conf.segement.max_store_bytes as i64).try_into().unwrap())?;
+    let mut mmap = unsafe { MmapMut::map_mut(&file_obj)? };
 
-        let index = Index {
-            file: file_obj,
-            mmap: mmap,
-            size: size,
-        };
-        Ok(index)
-    }
+    let index = Index {
+        file: file_obj,
+        mmap: mmap,
+        size: size,
+    };
+    Ok(index)
+}
 
 impl Index {
-    
     pub fn close(&mut self) -> Result<()> {
         self.file.sync_all()?;
         self.file.set_len(self.size);
@@ -62,16 +60,16 @@ impl Index {
                 .map_err(|_| Error::new(ErrorKind::InvalidData, "Invalid u32 slice"))?,
         );
 
-        let new_position = u64::from_be_bytes(self.mmap
-            [(position + OFF_WIDTH) as usize..(position + ENT_WIDTH) as usize]
-            .try_into()
-            .map_err(|_| Error::new(ErrorKind::InvalidData,"Expected 8 bytes"))?);
+        let new_position = u64::from_be_bytes(
+            self.mmap[(position + OFF_WIDTH) as usize..(position + ENT_WIDTH) as usize]
+                .try_into()
+                .map_err(|_| Error::new(ErrorKind::InvalidData, "Expected 8 bytes"))?,
+        );
 
         Ok((out, new_position))
     }
 
     pub fn write(&mut self, off: u32, pos: u64) -> Result<()> {
-        
         // Check if there's enough space in the memory map
         if (self.mmap.len() as u64) < self.size + ENT_WIDTH {
             return Err(std::io::Error::new(
