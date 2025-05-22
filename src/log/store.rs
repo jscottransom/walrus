@@ -15,9 +15,9 @@ pub struct Store {
     size: u64,
 }
 
-type SafeStore = Arc<Mutex<Store>>;
-impl Store {
-    pub fn new_store(file: &File) -> Result<SafeStore> {
+pub type SafeStore = Arc<Mutex<Store>>;
+
+pub fn new(file: &File) -> Result<SafeStore> {
         let size = file.metadata()?.len() as u64;
         let file_obj = file.try_clone()?;
         let writer = BufWriter::new(file.try_clone().expect("clone failed"));
@@ -27,7 +27,7 @@ impl Store {
             buf: writer,
         })))
     }
-
+impl Store {
     // Append a slice of bytes to the store log
     pub fn append(&mut self, p: &[u8]) -> Result<(u64, u64)> {
         // Lock the Log

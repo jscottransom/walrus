@@ -3,20 +3,18 @@ use std::fs::File;
 use std::io::{Error, ErrorKind, Result};
 use crate::log::config;
 
-use super::config::Config;
 
 const OFF_WIDTH: u64 = 4;
 const POS_WIDTH: u64 = 8;
 const ENT_WIDTH: u64 = OFF_WIDTH + POS_WIDTH;
 
-struct Index {
+pub struct Index {
     file: File,
     mmap: MmapMut,
     size: u64,
 }
 
-impl Index {
-    fn new_index(file: &File, conf: &config::Config) -> Result<Self> {
+pub fn new(file: &File, conf: &config::Config) -> Result<Index> {
         let size = file.metadata()?.len() as u64;
         let file_obj = file.try_clone()?;
         file_obj.set_len((conf.segement.max_store_bytes as i64).try_into().unwrap())?;
@@ -30,14 +28,16 @@ impl Index {
         Ok(index)
     }
 
-    fn close(&mut self) -> Result<()> {
+impl Index {
+    
+    pub fn close(&mut self) -> Result<()> {
         self.file.sync_all()?;
         self.file.set_len(self.size);
 
         Ok(())
     }
 
-    fn read(&self, offset: i64) -> Result<(u32, u64)> {
+    pub fn read(&self, offset: i64) -> Result<(u32, u64)> {
         if self.size == 0 {
             return Err(Error::new(ErrorKind::UnexpectedEof, "Index is empty"));
         }
@@ -70,7 +70,7 @@ impl Index {
         Ok((out, new_position))
     }
 
-    fn write(&mut self, off: u32, pos: u64) -> Result<()> {
+    pub fn write(&mut self, off: u32, pos: u64) -> Result<()> {
         
         // Check if there's enough space in the memory map
         if (self.mmap.len() as u64) < self.size + ENT_WIDTH {
