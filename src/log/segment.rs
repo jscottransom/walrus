@@ -1,7 +1,9 @@
 use super::{config, index, store};
 use prost::Message;
-use std::fs::OpenOptions;
+use std::fs::{OpenOptions, remove_file};
 use std::io::Result;
+use std::os;
+use std::path::Path;
 
 include!(concat!(env!("OUT_DIR"), "/log.v1.rs"));
 
@@ -13,7 +15,7 @@ pub struct Segment {
     config: config::Config,
 }
 
-pub fn new(dir: &str, base_off: u64, conf: config::Config) -> Result<Segment> {
+pub fn new(dir: &str, path: String, base_off: u64, conf: config::Config) -> Result<Segment> {
     let store_path = format!("{}/{}.store", dir, base_off);
     let index_path = format!("{}/{}.index", dir, base_off);
 
@@ -24,7 +26,7 @@ pub fn new(dir: &str, base_off: u64, conf: config::Config) -> Result<Segment> {
         .append(true)
         .open(&store_path)?;
 
-    let store = store::new(&store_file.try_clone()?)?;
+    let store = store::new(&store_file.try_clone()?, store_path)?;
 
     let index_file = OpenOptions::new()
         .read(true)
@@ -32,7 +34,7 @@ pub fn new(dir: &str, base_off: u64, conf: config::Config) -> Result<Segment> {
         .create(true)
         .open(&index_path)?;
 
-    let index = index::new(&index_file.try_clone()?, &conf)?;
+    let index = index::new(&index_file.try_clone()?, index_path, &conf)?;
 
     let next_offset = match index.read(-1) {
         Ok((off, _)) => base_off + off as u64 + 1,
@@ -47,6 +49,9 @@ pub fn new(dir: &str, base_off: u64, conf: config::Config) -> Result<Segment> {
         config: conf,
     })
 }
+
+
+// build a
 
 impl Segment {
     pub fn append(&mut self, record: Record) -> Result<u64> {
@@ -85,5 +90,24 @@ impl Segment {
 
         return safe_store.size >= self.config.segement.max_store_bytes
             || self.index.size >= self.config.segement.max_index_bytes;
+    }
+
+    pub fn remove(&mut self) -> Result<()> {
+        self.close()?;
+        remove_file(&self.index.path)?;
+        let safe_store = self.store.lock().unwrap();
+        remove_file(&safe_store.path)?;
+
+        Ok(())
+    }
+
+    pub fn close(&mut self) -> Result<()> {
+
+        let _ = self.index.close();
+
+        let mut safe_store = self.store.lock().unwrap();
+        let _ = safe_store.close();
+        
+        Ok(())
     }
 }

@@ -8,12 +8,13 @@ const POS_WIDTH: u64 = 8;
 const ENT_WIDTH: u64 = OFF_WIDTH + POS_WIDTH;
 
 pub struct Index {
-    file: File,
+    pub file: File,
+    pub path: String,
     mmap: MmapMut,
     pub size: u64,
 }
 
-pub fn new(file: &File, conf: &config::Config) -> Result<Index> {
+pub fn new(file: &File, path: String, conf: &config::Config) -> Result<Index> {
     let size = file.metadata()?.len() as u64;
     let file_obj = file.try_clone()?;
     file_obj.set_len((conf.segement.max_store_bytes as i64).try_into().unwrap())?;
@@ -21,6 +22,7 @@ pub fn new(file: &File, conf: &config::Config) -> Result<Index> {
 
     let index = Index {
         file: file_obj,
+        path: path,
         mmap: mmap,
         size: size,
     };

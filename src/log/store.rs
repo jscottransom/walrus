@@ -1,5 +1,6 @@
 use byteorder::{BigEndian, ByteOrder};
 use std::fs::File;
+
 use std::io::{BufWriter, Read, Result, Seek, SeekFrom, Write};
 use std::sync::{Arc, Mutex};
 
@@ -10,18 +11,21 @@ const LEN_WIDTH: usize = 8;
 // Simple wrapper around
 pub struct Store {
     pub file: File,
+    pub path: String,
     pub buf: BufWriter<File>,
     pub size: u64,
 }
 
 pub type SafeStore = Arc<Mutex<Store>>;
 
-pub fn new(file: &File) -> Result<SafeStore> {
+pub fn new(file: &File, path: String) -> Result<SafeStore> {
     let size = file.metadata()?.len() as u64;
     let file_obj = file.try_clone()?;
+
     let writer = BufWriter::new(file.try_clone().expect("clone failed"));
     Ok(Arc::new(Mutex::new(Store {
         file: file_obj,
+        path: path,
         size: size,
         buf: writer,
     })))
@@ -76,5 +80,11 @@ impl Store {
         self.file.read_exact(p)?;
 
         Ok(p.len())
+    }
+
+    pub fn close(&mut self) -> Result<()> {
+        self.buf.flush()?;
+        
+        Ok(())
     }
 }
