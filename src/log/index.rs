@@ -17,7 +17,7 @@ pub struct Index {
 pub fn new(file: &File, path: String, conf: &config::Config) -> Result<Index> {
     let size = file.metadata()?.len() as u64;
     let file_obj = file.try_clone()?;
-    file_obj.set_len((conf.segement.max_store_bytes as i64).try_into().unwrap())?;
+    file_obj.set_len((conf.segment.max_store_bytes as i64).try_into().unwrap())?;
     let mut mmap = unsafe { MmapMut::map_mut(&file_obj)? };
 
     let index = Index {

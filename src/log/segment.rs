@@ -88,8 +88,8 @@ impl Segment {
     pub fn is_maxed(&mut self) -> bool {
         let safe_store = self.store.lock().unwrap();
 
-        return safe_store.size >= self.config.segement.max_store_bytes
-            || self.index.size >= self.config.segement.max_index_bytes;
+        return safe_store.size >= self.config.segment.max_store_bytes
+            || self.index.size >= self.config.segment.max_index_bytes;
     }
 
     pub fn remove(&mut self) -> Result<()> {
