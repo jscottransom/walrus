@@ -9,9 +9,9 @@ const LEN_WIDTH: usize = 8;
 // This will be wrapped in a mutex for safety during usage
 // Simple wrapper around
 pub struct Store {
-    file: File,
-    buf: BufWriter<File>,
-    size: u64,
+    pub file: File,
+    pub buf: BufWriter<File>,
+    pub size: u64,
 }
 
 pub type SafeStore = Arc<Mutex<Store>>;

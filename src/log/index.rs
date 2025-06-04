@@ -10,7 +10,7 @@ const ENT_WIDTH: u64 = OFF_WIDTH + POS_WIDTH;
 pub struct Index {
     file: File,
     mmap: MmapMut,
-    size: u64,
+    pub size: u64,
 }
 
 pub fn new(file: &File, conf: &config::Config) -> Result<Index> {

@@ -1,8 +1,9 @@
 use super::{config, index, store};
+use prost::Message;
 use std::fs::OpenOptions;
 use std::io::Result;
-use crate::Record;
 
+include!(concat!(env!("OUT_DIR"), "/log.v1.rs"));
 
 pub struct Segment {
     store: store::SafeStore,
@@ -48,10 +49,41 @@ pub fn new(dir: &str, base_off: u64, conf: config::Config) -> Result<Segment> {
 }
 
 impl Segment {
-    pub fn append(&mut self, record: Record ) -> Result<u64> {
-        let current = self.next_offset;
+    pub fn append(&mut self, record: Record) -> Result<u64> {
+        // Convert the record to a slice of raw bytes
+        let bytes = record.encode_to_vec();
 
-        let mut buf = vec![];
-       
+        // Append the raw bytes to the store
+        let mut safe_store = self.store.lock().unwrap();
+        let (_, position) = safe_store.append(&bytes)?;
+
+        let rel_offset = (self.next_offset - self.base_offset) as u32;
+
+        self.index.write(rel_offset, position)?;
+        self.next_offset += 1;
+
+        Ok(record.offset)
+    }
+
+    pub fn read(&mut self, offset: u64) -> Result<Record> {
+        // Read from the index at the given offset
+
+        let index_pos = (offset - self.base_offset) as i64;
+        let (_out, position) = self.index.read(index_pos)?;
+
+        // Store ops
+        let mut safe_store = self.store.lock().unwrap(); // come back to deal with this, map error to unable to lock store
+        let bytes = safe_store.read(position)?;
+
+        // Bytes returned is a vector, but the decode function only accepts a reference to a byte array
+        let record = Record::decode(&*bytes)?;
+        Ok(record)
+    }
+
+    pub fn is_maxed(&mut self) -> bool {
+        let safe_store = self.store.lock().unwrap();
+
+        return safe_store.size >= self.config.segement.max_store_bytes
+            || self.index.size >= self.config.segement.max_index_bytes;
     }
 }
