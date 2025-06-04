@@ -1,7 +1,8 @@
 use super::{config, index, store};
 use std::fs::OpenOptions;
 use std::io::Result;
-// use crate::generated::log::Record;
+use crate::Record;
+
 
 pub struct Segment {
     store: store::SafeStore,
@@ -46,11 +47,11 @@ pub fn new(dir: &str, base_off: u64, conf: config::Config) -> Result<Segment> {
     })
 }
 
-// impl Segment {
-//     pub fn append(&mut self, record: Record ) -> Result<u64> {
-//         let current = self.next_offset;
+impl Segment {
+    pub fn append(&mut self, record: Record ) -> Result<u64> {
+        let current = self.next_offset;
 
-//         let mut buf = vec![];
+        let mut buf = vec![];
        
-//     }
-// }
+    }
+}

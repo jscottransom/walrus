@@ -1,28 +1,27 @@
-# WALRus 📚
+# WALRus
 
-## Overview 🚀
+## Overview
 This project implements a Write Ahead Log (WAL) which ensures durability and consistency by recording changes to the log before they are applied to the actual data store.
 ## Low-Level Concepts of a Write Ahead Log ⚙️
 
-### 1. **Durability and Atomicity** 🔐
+### 1. **Durability and Atomicity**
 The core purpose of a WAL is to guarantee that all changes to the system are durable. This means that before any changes are made to the database or data store, the operation must be first written to the WAL. If the system crashes before the changes are applied, the log can be replayed to restore the system to its previous consistent state.
 
-### 2. **Sequential Write Operations** 📝
+### 2. **Sequential Write Operations** 
 WALs usually consist of a log file that records sequential operations. This means that each new write operation appends to the end of the log, ensuring efficient sequential access. This avoids the need for complex indexing, which is often slow, especially in the case of writes.
 
-### 3. **Atomic Writes** 💥
+### 3. **Atomic Writes** 
 To ensure consistency, WALs guarantee that each log entry is written atomically. That is, each write is fully written to the log before the actual data store is modified. This atomicity prevents partial writes that could lead to corruption.
 
-### 4. **Log Structure** 🗂️
+### 4. **Log Structure** 
 A typical WAL structure consists of:
    - **Log entries**: Each entry represents a change to the data store, such as an insert, update, or delete operation.
    - **Log files**: These are the actual files where the entries are stored, often on disk for durability.
-   - **Checkpointing**: Periodically, a checkpoint is created where the state of the system is consistent with the last log entry. This allows the system to truncate older log entries that have been applied and are no longer necessary.
 
-### 5. **Crash Recovery** ⚠️
+### 5. **Crash Recovery**
 If a crash occurs, the WAL is crucial for recovering the system. The logs can be replayed from the last checkpoint to ensure that no data is lost, and the system is brought back to its correct state.
 
-### 6. **Performance Considerations** 🚀
+### 6. **Performance Considerations** 
 WALs are typically optimized for performance by writing logs sequentially to disk. However, they need to balance durability with speed. Techniques like buffering and batch writing are often used to reduce the overhead of logging operations.
 
 ## Phases of the Project 🏗️
