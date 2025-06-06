@@ -5,7 +5,7 @@ This project implements a Write Ahead Log (WAL) which ensures durability and con
 ## Low-Level Concepts of a Write Ahead Log ⚙️
 
 ### 1. **Durability and Atomicity**
-The core purpose of a WAL is to guarantee that all changes to the system are durable. This means that before any changes are made to the database or data store, the operation must be first written to the WAL. If the system crashes before the changes are applied, the log can be replayed to restore the system to its previous consistent state.
+The core purpose of a WAL is to guarantee that all changes to the system are durable. This means that before any changes are made to the database or data store, the operation must be first written to the WAL. If the system crashes before the changes are applied, the log can be replayed to restore the system to its previous consistent state. Durability in this case means the file is persisted in stable storage, and for the purposes of this project, writes will include flushing the memory buffer and fsync() of data from the OS Page Cache to Disk. This can slow down throughput, but enhance consistency (for now, a worthy tradeoff).
 
 ### 2. **Sequential Write Operations** 
 WALs usually consist of a log file that records sequential operations. This means that each new write operation appends to the end of the log, ensuring efficient sequential access. This avoids the need for complex indexing, which is often slow, especially in the case of writes.

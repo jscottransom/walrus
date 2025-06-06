@@ -49,6 +49,14 @@ impl Store {
         let written = p.len() + LEN_WIDTH;
         self.size += written as u64;
 
+        // Flush any contents in the buffer
+        // This pushes to from in-memory to OS Page Cache
+        self.buf.flush()?;
+
+        // Sync data that exists in the buffer
+        // Pushes from OS Page Cache to Disk
+        self.file.sync_all()?;
+
         // Return the number of written bytes and the position
         Ok((written as u64, pos))
     }
