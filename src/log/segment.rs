@@ -5,7 +5,7 @@ use std::io::Result;
 use std::os;
 use std::path::Path;
 
-include!(concat!(env!("OUT_DIR"), "/log.v1.rs"));
+include!(concat!(env!("OUT_DIR"), "/log.rs"));
 
 pub struct Segment {
     store: store::SafeStore,
@@ -54,7 +54,14 @@ pub fn new(dir: &str, path: String, base_off: u64, conf: config::Config) -> Resu
 // build a
 
 impl Segment {
-    pub fn append(&mut self, record: Record) -> Result<u64> {
+    pub fn append(&mut self, &mut record: Record) -> Result<u64> {
+        
+        // When the write request comes in, it doesn't have an offset.
+        // Set the offset to the position it's being written to, to include
+        // as a part of the write to the actual store. 
+        let current_offset = self.next_offset;
+        record.offset = current_offset;
+        
         // Convert the record to a slice of raw bytes
         let bytes = record.encode_to_vec();
 
@@ -72,12 +79,11 @@ impl Segment {
 
     pub fn read(&mut self, offset: u64) -> Result<Record> {
         // Read from the index at the given offset
-
         let index_pos = (offset - self.base_offset) as i64;
-        let (_out, position) = self.index.read(index_pos)?;
+        let (_, position) = self.index.read(index_pos)?;
 
         // Store ops
-        let mut safe_store = self.store.lock().unwrap(); // come back to deal with this, map error to unable to lock store
+        let mut safe_store = self.store.lock().unwrap(); // Thread safe access.
         let bytes = safe_store.read(position)?;
 
         // Bytes returned is a vector, but the decode function only accepts a reference to a byte array

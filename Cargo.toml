@@ -12,12 +12,15 @@ prost = "0.13.5"
 prost-types = "0.13.5"
 protobuf = "3.7.2"
 protobuf-codegen = "3.7.2"
+tonic = "0.13.1"
+
 
 [build-dependencies]
 prost = "0.13.5"
 prost-types = "0.13.5"
 protobuf-codegen = "3.7.2"
 prost-build = "0.13.5"
+tonic-build = "0.13.1"
 
 [lib]
 path = "src/lib.rs"

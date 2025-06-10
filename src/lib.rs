@@ -1,2 +1,2 @@
-include!(concat!(env!("OUT_DIR"), "/log.v1.rs"));
+include!(concat!(env!("OUT_DIR"), "/log.rs"));
 pub mod log;

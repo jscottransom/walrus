@@ -5,7 +5,7 @@ use std::io;
 use std::fs::{self, DirEntry};
 use std::path::Path;
 use std::str::FromStr;
-use super::{config, segment};
+use super::{config, segment, store};
 
 
 // Abstraction around the Log that will be the entry point for writing to the Log
@@ -13,8 +13,8 @@ use super::{config, segment};
 pub struct Log {
     pub dir: String,
     pub config: config::Config,
-    pub active_segment: segment::Segment,
-    pub segments: Vec<segment::Segment>,
+    pub active_segment: Option<segment::Segment>,
+    pub segments: Option<Vec<segment::Segment>>,
 }
 
 pub type SafeLog = Arc<Mutex<Log>>;
@@ -71,12 +71,14 @@ fn new_log(dir: String, config: config::Config) -> SafeLog {
     
     
     
-    let log = Arc::new(Mutex::new(Store {
+    let store = Arc::new(Mutex::new(Store {
         dir: dir,
         config: config,
         size: size,
         buf: writer,
-    }))
+    }));
+
+    
 
 
 }

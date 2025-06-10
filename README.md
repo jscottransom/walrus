@@ -42,7 +42,7 @@ In Phase 2, the focus will shift towards building a distributed WAL system using
 
 By the end of this phase, the system will have the following characteristics:
    - A fault-tolerant distributed WAL system.
-   - Gossip-based synchronization for ensuring consistency.
+   - Raft-based synchronization over gRPC for ensuring consistency.
    - Mechanisms for recovering from node failures by replaying logs.
 
 ## Goals and Milestones 🎯

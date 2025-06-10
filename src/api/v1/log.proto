@@ -1,8 +1,28 @@
 syntax = "proto3";
-
-package log.v1;
+package log;
 
 message Record {
     bytes value = 1;
     uint64 offset = 2;
+}
+
+message WriteRequest {
+    Record record = 1;
+}
+
+message WriteResponse {
+    uint64 offset = 1;
+}
+
+message ReadRequest {
+    uint64 offset = 1;
+}
+
+message ReadResponse {
+    Record record = 1;
+}
+
+service Log {
+    rpc Write(WriteRequest) returns (WriteResponse);
+    rpc Read(ReadRequest) returns (ReadResponse);
 }
