@@ -2,7 +2,7 @@
 
 ## Overview
 This project implements a Write Ahead Log (WAL) which ensures durability and consistency by recording changes to the log before they are applied to the actual data store.
-## Low-Level Concepts of a Write Ahead Log ⚙️
+## Low-Level Concepts of a Write Ahead Log 
 
 ### 1. **Durability and Atomicity**
 The core purpose of a WAL is to guarantee that all changes to the system are durable. This means that before any changes are made to the database or data store, the operation must be first written to the WAL. If the system crashes before the changes are applied, the log can be replayed to restore the system to its previous consistent state. Durability in this case means the file is persisted in stable storage, and for the purposes of this project, writes will include flushing the memory buffer and fsync() of data from the OS Page Cache to Disk. This can slow down throughput, but enhance consistency (for now, a worthy tradeoff).
@@ -24,9 +24,9 @@ If a crash occurs, the WAL is crucial for recovering the system. The logs can be
 ### 6. **Performance Considerations** 
 WALs are typically optimized for performance by writing logs sequentially to disk. However, they need to balance durability with speed. Techniques like buffering and batch writing are often used to reduce the overhead of logging operations.
 
-## Phases of the Project 🏗️
+## Phases of the Project 
 
-### Phase 1: **Single Node Focus** 🔒
+### Phase 1: **Single Node Focus** 
 In Phase 1, I will focus on implementing a basic single-node WAL system. The goal of this phase is to ensure that the WAL works efficiently on a single machine, providing:
    - Basic functionality for writing logs.
    - Durability guarantees for all write operations.
@@ -34,7 +34,7 @@ In Phase 1, I will focus on implementing a basic single-node WAL system. The goa
    
 In this phase, the implementation will primarily target simplicity and correctness, with optimizations and distributed features reserved for future phases.
 
-### Phase 2: **Distributed WAL with Gossip Protocol** 🌐
+### Phase 2: **Distributed WAL with Gossip Protocol** 
 In Phase 2, the focus will shift towards building a distributed WAL system using a **gossip protocol**. This will allow multiple nodes in a distributed system to synchronize their logs and provide fault tolerance across machines. Key features for this phase include:
    - **Node synchronization**: Nodes will gossip to share WAL entries with each other, ensuring that all nodes have an up-to-date log.
    - **Fault tolerance**: If a node fails, the other nodes can still recover by using the logs they have shared through the gossip protocol.
@@ -45,7 +45,7 @@ By the end of this phase, the system will have the following characteristics:
    - Raft-based synchronization over gRPC for ensuring consistency.
    - Mechanisms for recovering from node failures by replaying logs.
 
-## Goals and Milestones 🎯
+## Goals and Milestones
 
 1. **Phase 1 (Single Node)**:
    - Implement basic WAL functionality (write, read, recovery).

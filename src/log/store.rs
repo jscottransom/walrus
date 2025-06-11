@@ -9,7 +9,7 @@ const LEN_WIDTH: usize = 8;
 const BUFFER_CAPACITY: usize = 64 * 1024;
 const FLUSH_THRESHOLD: usize = 64 * 1024; // 64 KB -> This supports frequent flushing
 const SYNC_THRESHOLD: usize = 256 * 1024; // 256 KB -> Reduces the volume of sys calls.
-const SYNC_INTERVAL: Duration = Duration::from_millis(100);
+const SYNC_INTERVAL: Duration = Duration::from_millis(1000);
 
 // The base object we will work with
 // This will be wrapped in a mutex for safety during usage
