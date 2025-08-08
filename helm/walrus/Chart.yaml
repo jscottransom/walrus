@@ -1,0 +1,17 @@
+apiVersion: v2
+name: walrus
+description: A distributed Write-Ahead Log (WAL) system
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - wal
+  - distributed
+  - consensus
+  - log
+home: https://github.com/your-org/walrus
+sources:
+  - https://github.com/your-org/walrus
+maintainers:
+  - name: Your Name
+    email: your.email@example.com

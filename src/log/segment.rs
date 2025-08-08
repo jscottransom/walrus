@@ -1,10 +1,11 @@
 use super::{config, index, store};
 use prost::Message;
 use std::fs::{OpenOptions, remove_file};
-use std::io::Result;
-use std::os;
-use std::path::Path;
 
+// Custom Result type to match log.rs
+pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+// Include the generated Record type
 include!(concat!(env!("OUT_DIR"), "/log.rs"));
 
 pub struct Segment {
@@ -15,7 +16,7 @@ pub struct Segment {
     config: config::Config,
 }
 
-pub fn new(dir: &str, path: String, base_off: u64, conf: config::Config) -> Result<Segment> {
+pub fn new(dir: &str, _path: String, base_off: u64, conf: config::Config) -> Result<Segment> {
     let store_path = format!("{}/{}.store", dir, base_off);
     let index_path = format!("{}/{}.index", dir, base_off);
 
@@ -36,71 +37,98 @@ pub fn new(dir: &str, path: String, base_off: u64, conf: config::Config) -> Resu
 
     let index = index::new(&index_file.try_clone()?, index_path, &conf)?;
 
+    // Calculate next_offset by reading the last entry in the index
+    // If index is empty, next_offset = base_offset
+    // If index has entries, next_offset = base_offset + last_relative_offset + 1
     let next_offset = match index.read(-1) {
-        Ok((off, _)) => base_off + off as u64 + 1,
-        Err(_) => base_off,
+        Ok((relative_offset, _)) => {
+            // The relative offset is 0-based, so we add 1 to get the next offset
+            base_off + relative_offset as u64 + 1
+        },
+        Err(_) => {
+            // Index is empty, start at base_offset
+            base_off
+        },
     };
 
     Ok(Segment {
-        store: store,
-        index: index,
+        store,
+        index,
         base_offset: base_off,
-        next_offset: next_offset,
+        next_offset,
         config: conf,
     })
 }
 
-
-// build a
-
 impl Segment {
-    pub fn append(&mut self, &mut record: Record) -> Result<u64> {
-        
-        // When the write request comes in, it doesn't have an offset.
-        // Set the offset to the position it's being written to, to include
-        // as a part of the write to the actual store. 
+    // Getter methods for private fields
+    pub fn base_offset(&self) -> u64 {
+        self.base_offset
+    }
+
+    pub fn next_offset(&self) -> u64 {
+        self.next_offset
+    }
+
+    pub fn append(&mut self, record: &mut Record) -> Result<u64> {
+        // Set the record's offset to the current next_offset
         let current_offset = self.next_offset;
         record.offset = current_offset;
         
-        // Convert the record to a slice of raw bytes
+        // Convert the record to bytes
         let bytes = record.encode_to_vec();
 
-        // Append the raw bytes to the store
+        // Append to store and get the position
         let mut safe_store = self.store.lock().unwrap();
         let (_, position) = safe_store.append(&bytes)?;
 
-        let rel_offset = (self.next_offset - self.base_offset) as u32;
+        // Calculate relative offset for index
+        let relative_offset = (self.next_offset - self.base_offset) as u32;
 
-        self.index.write(rel_offset, position)?;
+        // Write to index
+        self.index.write(relative_offset, position)?;
+        
+        // Increment next_offset
         self.next_offset += 1;
 
         Ok(record.offset)
     }
 
     pub fn read(&mut self, offset: u64) -> Result<Record> {
-        // Read from the index at the given offset
-        let index_pos = (offset - self.base_offset) as i64;
-        let (_, position) = self.index.read(index_pos)?;
+        // Validate offset is within this segment's range
+        if offset < self.base_offset || offset >= self.next_offset {
+            return Err(format!("Offset {} not found in segment (base: {}, next: {})", 
+                             offset, self.base_offset, self.next_offset).into());
+        }
 
-        // Store ops
-        let mut safe_store = self.store.lock().unwrap(); // Thread safe access.
+        // Calculate relative offset for index lookup
+        let relative_offset = (offset - self.base_offset) as i64;
+        
+        // Read from index to get position
+        let (_, position) = self.index.read(relative_offset)?;
+
+        // Read from store
+        let mut safe_store = self.store.lock().unwrap();
         let bytes = safe_store.read(position)?;
 
-        // Bytes returned is a vector, but the decode function only accepts a reference to a byte array
+        // Decode the record
         let record = Record::decode(&*bytes)?;
         Ok(record)
     }
 
     pub fn is_maxed(&mut self) -> bool {
         let safe_store = self.store.lock().unwrap();
-
-        return safe_store.size >= self.config.segment.max_store_bytes
-            || self.index.size >= self.config.segment.max_index_bytes;
+        safe_store.size >= self.config.segment.max_store_bytes
+            || self.index.size >= self.config.segment.max_index_bytes
     }
 
     pub fn remove(&mut self) -> Result<()> {
         self.close()?;
+        
+        // Remove index file
         remove_file(&self.index.path)?;
+        
+        // Remove store file
         let safe_store = self.store.lock().unwrap();
         remove_file(&safe_store.path)?;
 
@@ -108,11 +136,12 @@ impl Segment {
     }
 
     pub fn close(&mut self) -> Result<()> {
+        // Close index
+        self.index.close()?;
 
-        let _ = self.index.close();
-
+        // Close store
         let mut safe_store = self.store.lock().unwrap();
-        let _ = safe_store.close();
+        safe_store.close()?;
         
         Ok(())
     }

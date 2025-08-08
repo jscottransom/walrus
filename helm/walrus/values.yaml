@@ -1,0 +1,75 @@
+# Default values for walrus
+replicaCount: 3
+
+image:
+  repository: your-registry/walrus
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+
+config:
+  electionTimeoutMs: 1000
+  heartbeatIntervalMs: 100
+  maxSegmentBytes: 1048576
+  maxIndexBytes: 1048576
+  dataDir: "/data"
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Cluster configuration
+cluster:
+  # List of all nodes in the cluster
+  nodes:
+    - id: "walrus-0"
+      address: "walrus-0.walrus-headless.default.svc.cluster.local:8080"
+    - id: "walrus-1"
+      address: "walrus-1.walrus-headless.default.svc.cluster.local:8080"
+    - id: "walrus-2"
+      address: "walrus-2.walrus-headless.default.svc.cluster.local:8080"

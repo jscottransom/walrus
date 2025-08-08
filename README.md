@@ -1,58 +1,209 @@
-# WALRus
+# Walrus - Distributed Write-Ahead Log
 
-## Overview
-This project implements a Write Ahead Log (WAL) which ensures durability and consistency by recording changes to the log before they are applied to the actual data store.
-## Low-Level Concepts of a Write Ahead Log 
+A distributed Write-Ahead Log (WAL) system built in Rust with leader election, replication, and Kubernetes deployment support.
 
-### 1. **Durability and Atomicity**
-The core purpose of a WAL is to guarantee that all changes to the system are durable. This means that before any changes are made to the database or data store, the operation must be first written to the WAL. If the system crashes before the changes are applied, the log can be replayed to restore the system to its previous consistent state. Durability in this case means the file is persisted in stable storage, and for the purposes of this project, writes will include flushing the memory buffer and fsync() of data from the OS Page Cache to Disk. This can slow down throughput, but enhance consistency (for now, a worthy tradeoff).
+## Features
 
-### 2. **Sequential Write Operations** 
-WALs usually consist of a log file that records sequential operations. This means that each new write operation appends to the end of the log, ensuring efficient sequential access. This avoids the need for complex indexing, which is often slow, especially in the case of writes.
+- **Distributed Consensus**: Implements Raft consensus algorithm for leader election and log replication
+- **Fault Tolerance**: Automatic leader election and recovery from node failures
+- **High Availability**: Multi-node cluster with quorum-based consistency
+- **Persistent Storage**: Segmented log storage with configurable segment sizes
+- **gRPC Interface**: Modern API for client-server communication
+- **Kubernetes Ready**: Helm chart for easy deployment as StatefulSet
+- **Observability**: Comprehensive logging and metrics
 
-### 3. **Atomic Writes** 
-To ensure consistency, WALs guarantee that each log entry is written atomically. That is, each write is fully written to the log before the actual data store is modified. This atomicity prevents partial writes that could lead to corruption.
+## Architecture
 
-### 4. **Log Structure** 
-A typical WAL structure consists of:
-   - **Log entries**: Each entry represents a change to the data store, such as an insert, update, or delete operation.
-   - **Log files**: These are the actual files where the entries are stored, often on disk for durability.
+### Cluster Components
 
-### 5. **Crash Recovery**
-If a crash occurs, the WAL is crucial for recovering the system. The logs can be replayed from the last checkpoint to ensure that no data is lost, and the system is brought back to its correct state.
+1. **Leader Election**: Raft-based consensus for selecting cluster leader
+2. **Replication**: Master-slave replication with consistency guarantees
+3. **Discovery**: Automatic node discovery and health monitoring
+4. **State Management**: Distributed cluster state tracking
 
-### 6. **Performance Considerations** 
-WALs are typically optimized for performance by writing logs sequentially to disk. However, they need to balance durability with speed. Techniques like buffering and batch writing are often used to reduce the overhead of logging operations.
+### Data Flow
 
-## Phases of the Project 
+```
+Client Request → Leader Node → Log Append → Replicate to Followers → Commit
+```
 
-### Phase 1: **Single Node Focus** 
-In Phase 1, I will focus on implementing a basic single-node WAL system. The goal of this phase is to ensure that the WAL works efficiently on a single machine, providing:
-   - Basic functionality for writing logs.
-   - Durability guarantees for all write operations.
-   - Recovery mechanisms to replay the log and restore the system state after a crash.
-   
-In this phase, the implementation will primarily target simplicity and correctness, with optimizations and distributed features reserved for future phases.
+## Quick Start
 
-### Phase 2: **Distributed WAL with Gossip Protocol** 
-In Phase 2, the focus will shift towards building a distributed WAL system using a **gossip protocol**. This will allow multiple nodes in a distributed system to synchronize their logs and provide fault tolerance across machines. Key features for this phase include:
-   - **Node synchronization**: Nodes will gossip to share WAL entries with each other, ensuring that all nodes have an up-to-date log.
-   - **Fault tolerance**: If a node fails, the other nodes can still recover by using the logs they have shared through the gossip protocol.
-   - **Log merging and conflict resolution**: Multiple nodes might record different changes to the same data. We will need strategies to resolve conflicts and ensure that the distributed system reaches consensus.
+### Local Development
 
-By the end of this phase, the system will have the following characteristics:
-   - A fault-tolerant distributed WAL system.
-   - Raft-based synchronization over gRPC for ensuring consistency.
-   - Mechanisms for recovering from node failures by replaying logs.
+1. **Build the project**:
+   ```bash
+   cargo build --release
+   ```
 
-## Goals and Milestones
+2. **Start a single node**:
+   ```bash
+   ./target/release/walrus --node-id node-1 --bind-addr 127.0.0.1:8080
+   ```
 
-1. **Phase 1 (Single Node)**:
-   - Implement basic WAL functionality (write, read, recovery).
-   - Ensure durability and atomicity of writes.
-   - Perform crash recovery and ensure log consistency.
+3. **Start additional nodes** (in separate terminals):
+   ```bash
+   ./target/release/walrus --node-id node-2 --bind-addr 127.0.0.1:8081
+   ./target/release/walrus --node-id node-3 --bind-addr 127.0.0.1:8082
+   ```
 
-2. **Phase 2 (Distributed WAL)**:
-   - Design and implement a gossip protocol for synchronizing logs across nodes.
-   - Build mechanisms for resolving conflicts and ensuring consistency across nodes.
-   - Implement fault tolerance and recovery mechanisms in the distributed context.
+### Kubernetes Deployment
+
+1. **Build and push the Docker image**:
+   ```bash
+   docker build -t your-registry/walrus:0.1.0 .
+   docker push your-registry/walrus:0.1.0
+   ```
+
+2. **Deploy using Helm**:
+   ```bash
+   helm install walrus ./helm/walrus \
+     --set image.repository=your-registry/walrus \
+     --set image.tag=0.1.0
+   ```
+
+3. **Scale the cluster**:
+   ```bash
+   kubectl scale statefulset walrus --replicas=5
+   ```
+
+## Configuration
+
+### Command Line Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--node-id` | Unique node identifier | `node-1` |
+| `--bind-addr` | Network address to bind | `127.0.0.1:8080` |
+| `--data-dir` | Data storage directory | `/tmp/walrus` |
+| `--max-segment-bytes` | Maximum segment size | `1048576` (1MB) |
+| `--max-index-bytes` | Maximum index size | `1048576` (1MB) |
+| `--election-timeout-ms` | Leader election timeout | `1000` |
+| `--heartbeat-interval-ms` | Heartbeat interval | `100` |
+
+### Helm Values
+
+The Helm chart supports customization:
+
+```yaml
+replicaCount: 3
+image:
+  repository: your-registry/walrus
+  tag: "0.1.0"
+
+config:
+  electionTimeoutMs: 1000
+  heartbeatIntervalMs: 100
+  maxSegmentBytes: 1048576
+  maxIndexBytes: 1048576
+  dataDir: "/data"
+
+persistence:
+  enabled: true
+  size: 10Gi
+```
+
+## API Usage
+
+### gRPC Client Example
+
+```rust
+use walrus::client::WalClient;
+use std::net::SocketAddr;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let addr: SocketAddr = "127.0.0.1:8080".parse()?;
+    let mut client = WalClient::new(addr).await?;
+    
+    // Write data
+    let data = b"Hello, distributed WAL!".to_vec();
+    let offset = client.write(data, 0).await?;
+    println!("Written at offset: {}", offset);
+    
+    // Read data
+    if let Some(data) = client.read(offset).await? {
+        println!("Read: {}", String::from_utf8_lossy(&data));
+    }
+    
+    Ok(())
+}
+```
+
+## Cluster Management
+
+### Leader Election
+
+The system uses the Raft consensus algorithm for leader election:
+
+1. **Follower State**: Nodes start as followers, waiting for leader heartbeats
+2. **Candidate State**: If no heartbeat received, node becomes candidate and requests votes
+3. **Leader State**: Node with majority votes becomes leader and starts sending heartbeats
+
+### Replication
+
+- **Log Entries**: All writes go through the leader
+- **Quorum Commitment**: Entries are committed when replicated to majority
+- **Consistency**: Strong consistency guarantees across the cluster
+
+### Failure Recovery
+
+- **Automatic Detection**: Dead nodes detected via heartbeat timeouts
+- **Leader Failover**: New leader elected when current leader fails
+- **Data Recovery**: Followers replay log entries from leader
+
+## Monitoring
+
+### Health Checks
+
+The service provides health endpoints:
+
+- `/health` - Liveness probe
+- `/ready` - Readiness probe
+
+### Metrics
+
+Key metrics to monitor:
+
+- **Cluster State**: Leader/follower status
+- **Replication Lag**: Time between leader and follower sync
+- **Election Frequency**: Leader election events
+- **Write Throughput**: Records per second
+- **Storage Usage**: Segment and index sizes
+
+## Development
+
+### Building
+
+```bash
+# Development build
+cargo build
+
+# Release build
+cargo build --release
+
+# Run tests
+cargo test
+
+# Run with specific configuration
+cargo run -- --node-id test-node --bind-addr 127.0.0.1:8080
+```
+
+### Testing
+
+```bash
+# Run unit tests
+cargo test
+
+# Run integration tests
+cargo test --test wal_test
+
+# Run with coverage
+cargo tarpaulin
+```
+
+
+
+
+
+
